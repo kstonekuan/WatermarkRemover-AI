@@ -36,7 +36,13 @@ else
     echo "  [*] Detected Linux"
 fi
 
-# Check Python version
+if ! command -v uv >/dev/null 2>&1; then
+    echo "  [X] uv is required but not found."
+    echo "      Install uv: https://docs.astral.sh/uv/getting-started/installation/"
+    exit 1
+fi
+
+# Check Python version (optional; uv can provision managed Python if missing)
 PYTHON_CMD=""
 for cmd in python3.12 python3.11 python3.10 python3 python; do
     if command -v $cmd &> /dev/null; then
@@ -52,16 +58,18 @@ for cmd in python3.12 python3.11 python3.10 python3 python; do
 done
 
 if [ -z "$PYTHON_CMD" ]; then
-    echo "  [X] Python 3.10+ is required but not found."
-    echo "      Please install Python 3.10 or higher."
-    exit 1
+    echo "  [*] No system Python 3.10+ found; using uv-managed Python."
 fi
 
 # Create virtual environment
 VENV_DIR="venv"
 if [ ! -d "$VENV_DIR" ]; then
     echo "  [*] Creating virtual environment..."
-    $PYTHON_CMD -m venv $VENV_DIR
+    if [ -n "$PYTHON_CMD" ]; then
+        $PYTHON_CMD -m venv $VENV_DIR
+    else
+        uv venv --python 3.12 $VENV_DIR
+    fi
     echo "  [OK] Virtual environment created"
 else
     echo "  [OK] Virtual environment exists"
@@ -73,9 +81,9 @@ source $VENV_DIR/bin/activate
 # Upgrade pip
 echo "  [*] Upgrading pip..."
 if [ "$CHINA_MODE" == "1" ]; then
-    pip install --upgrade pip setuptools wheel $PIP_MIRROR -q
+    uv pip install --upgrade pip setuptools wheel $PIP_MIRROR -q
 else
-    pip install --upgrade pip setuptools wheel -q
+    uv pip install --upgrade pip setuptools wheel -q
 fi
 
 # Install PyTorch based on platform
@@ -83,9 +91,9 @@ echo "  [*] Installing PyTorch..."
 if [ "$OS_TYPE" == "macos" ]; then
     # macOS: Install from main PyPI (supports MPS on Apple Silicon)
     if [ "$CHINA_MODE" == "1" ]; then
-        pip install torch>=2.4.0 torchvision>=0.19.0 --no-cache-dir $PIP_MIRROR -q
+        uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir $PIP_MIRROR -q
     else
-        pip install torch>=2.4.0 torchvision>=0.19.0 --no-cache-dir -q
+        uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir -q
     fi
     echo "  [OK] PyTorch installed (MPS support on Apple Silicon)"
 else
@@ -93,17 +101,17 @@ else
     if command -v nvidia-smi &> /dev/null; then
         echo "  [*] NVIDIA GPU detected, installing CUDA version..."
         if [ "$CHINA_MODE" == "1" ]; then
-            pip install torch>=2.4.0 torchvision>=0.19.0 --extra-index-url https://download.pytorch.org/whl/cu124 --no-cache-dir $PIP_MIRROR -q
+            uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --extra-index-url https://download.pytorch.org/whl/cu124 --no-cache-dir $PIP_MIRROR -q
         else
-            pip install torch>=2.4.0 torchvision>=0.19.0 --extra-index-url https://download.pytorch.org/whl/cu124 --no-cache-dir -q
+            uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --extra-index-url https://download.pytorch.org/whl/cu124 --no-cache-dir -q
         fi
         echo "  [OK] PyTorch installed (CUDA 12.4)"
     else
         echo "  [*] No NVIDIA GPU detected, installing CPU version..."
         if [ "$CHINA_MODE" == "1" ]; then
-            pip install torch>=2.4.0 torchvision>=0.19.0 --no-cache-dir $PIP_MIRROR -q
+            uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir $PIP_MIRROR -q
         else
-            pip install torch>=2.4.0 torchvision>=0.19.0 --no-cache-dir -q
+            uv pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir -q
         fi
         echo "  [OK] PyTorch installed (CPU)"
     fi
@@ -112,53 +120,53 @@ fi
 # Install other dependencies (without torch lines)
 echo "  [*] Installing other dependencies..."
 if [ "$CHINA_MODE" == "1" ]; then
-    pip install transformers>=4.50.0 diffusers>=0.30.0 "numpy<2" --no-cache-dir $PIP_MIRROR -q
-    pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow>=10.0.0" --no-cache-dir $PIP_MIRROR -q
-    pip install pywebview>=4.0 --no-cache-dir $PIP_MIRROR -q
-    pip install loguru click tqdm psutil pyyaml --no-cache-dir $PIP_MIRROR -q
+    uv pip install "transformers>=4.50.0" "diffusers>=0.30.0" "numpy<2" --no-cache-dir $PIP_MIRROR -q
+    uv pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow>=10.0.0" --no-cache-dir $PIP_MIRROR -q
+    uv pip install "pywebview>=4.0" --no-cache-dir $PIP_MIRROR -q
+    uv pip install loguru click tqdm psutil pyyaml --no-cache-dir $PIP_MIRROR -q
 else
-    pip install transformers>=4.50.0 diffusers>=0.30.0 "numpy<2" --no-cache-dir -q
-    pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow>=10.0.0" --no-cache-dir -q
-    pip install pywebview>=4.0 --no-cache-dir -q
-    pip install loguru click tqdm psutil pyyaml --no-cache-dir -q
+    uv pip install "transformers>=4.50.0" "diffusers>=0.30.0" "numpy<2" --no-cache-dir -q
+    uv pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow>=10.0.0" --no-cache-dir -q
+    uv pip install "pywebview>=4.0" --no-cache-dir -q
+    uv pip install loguru click tqdm psutil pyyaml --no-cache-dir -q
 fi
 
 # Install iopaint separately (no deps to avoid conflicts)
 echo "  [*] Installing iopaint..."
 if [ "$CHINA_MODE" == "1" ]; then
-    pip install iopaint --no-deps --no-cache-dir $PIP_MIRROR -q
+    uv pip install iopaint --no-deps --no-cache-dir $PIP_MIRROR -q
 else
-    pip install iopaint --no-deps --no-cache-dir -q
+    uv pip install iopaint --no-deps --no-cache-dir -q
 fi
 
-# Install iopaint's required dependencies manually (subset needed for LaMA inpainting)
+# Install iopaint's required dependencies manually (subset needed for MAT inpainting)
 echo "  [*] Installing iopaint dependencies..."
 if [ "$CHINA_MODE" == "1" ]; then
-    pip install pydantic typer einops omegaconf easydict yacs --no-cache-dir $PIP_MIRROR -q
+    uv pip install pydantic typer einops omegaconf easydict yacs --no-cache-dir $PIP_MIRROR -q
 else
-    pip install pydantic typer einops omegaconf easydict yacs --no-cache-dir -q
+    uv pip install pydantic typer einops omegaconf easydict yacs --no-cache-dir -q
 fi
 echo "  [OK] Dependencies installed"
 
-# Download LaMA model directly from GitHub (avoids iopaint CLI dependency on fastapi)
-echo "  [*] Downloading LaMA model (~196MB)..."
-LAMA_DIR="$HOME/.cache/torch/hub/checkpoints"
-LAMA_FILE="$LAMA_DIR/big-lama.pt"
-if [ ! -f "$LAMA_FILE" ]; then
-    mkdir -p "$LAMA_DIR"
-    curl -L -o "$LAMA_FILE" "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt" || echo "  [!] LaMA download failed, will retry on first use"
-    echo "  [OK] LaMA model downloaded"
+# Download MAT model directly from GitHub (avoids iopaint CLI dependency on fastapi)
+echo "  [*] Downloading MAT model (~413MB)..."
+MODEL_CACHE_DIR="$HOME/.cache/torch/hub/checkpoints"
+MAT_MODEL_FILE="$MODEL_CACHE_DIR/Places_512_FullData_G.pth"
+if [ ! -f "$MAT_MODEL_FILE" ]; then
+    mkdir -p "$MODEL_CACHE_DIR"
+    curl -L -o "$MAT_MODEL_FILE" "https://github.com/Sanster/models/releases/download/add_mat/Places_512_FullData_G.pth" || echo "  [!] MAT download failed, will retry on first use"
+    echo "  [OK] MAT model downloaded"
 else
-    echo "  [OK] LaMA model already exists"
+    echo "  [OK] MAT model already exists"
 fi
 
 # Download Florence-2 model
 echo "  [*] Downloading Florence-2 model (~1.5GB)..."
 if [ "$CHINA_MODE" == "1" ]; then
     echo "      Using HF-Mirror for faster download in China"
-    HF_ENDPOINT="$HF_ENDPOINT" python -c "import os; os.environ['HF_ENDPOINT']='$HF_ENDPOINT'; from huggingface_hub import snapshot_download; snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)" || echo "  [!] Florence-2 download failed, will retry on first use"
+    HF_ENDPOINT="$HF_ENDPOINT" uv run --no-project --python "$VENV_DIR/bin/python" python -c "import os; os.environ['HF_ENDPOINT']='$HF_ENDPOINT'; from huggingface_hub import snapshot_download; snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)" || echo "  [!] Florence-2 download failed, will retry on first use"
 else
-    python -c "from huggingface_hub import snapshot_download; snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)" || echo "  [!] Florence-2 download failed, will retry on first use"
+    uv run --no-project --python "$VENV_DIR/bin/python" python -c "from huggingface_hub import snapshot_download; snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)" || echo "  [!] Florence-2 download failed, will retry on first use"
 fi
 
 echo ""
@@ -167,12 +175,10 @@ echo "     Setup complete!"
 echo "  ============================================="
 echo ""
 echo "  To run the app:"
-echo "    source venv/bin/activate"
-echo "    python remwmgui.py"
+echo "    ./run.sh"
 echo ""
 echo "  Or for CLI:"
-echo "    source venv/bin/activate"
-echo "    python remwm.py input.png output/"
+echo "    uv run --no-project --python ./venv/bin/python python remwm.py input.png output/"
 echo ""
 
 # Ask to launch
@@ -180,5 +186,5 @@ read -p "  Launch now? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "  Starting WatermarkRemover-AI..."
-    python remwmgui.py
+    uv run --no-project --python "$VENV_DIR/bin/python" python remwmgui.py
 fi

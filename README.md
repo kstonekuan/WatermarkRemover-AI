@@ -1,6 +1,6 @@
 # WatermarkRemover-AI
 
-**AI-Powered Watermark Removal Tool using Florence-2 and LaMA Models**
+**AI-Powered Watermark Removal Tool using Florence-2 and MAT Models**
 
 🇬🇧 English | 🇫🇷 Français | 🇨🇳 中文 | 🇯🇵 日本語 | 🇧🇷 Português | 🧠 Brainrot
 
@@ -12,7 +12,7 @@
 
 `WatermarkRemover-AI` is a cutting-edge application that leverages AI models for precise watermark detection and seamless removal. Perfect for removing watermarks from AI-generated videos like Sora, Sora 2, Runway, and others.
 
-It uses Florence-2 from Microsoft for watermark identification and LaMA for inpainting to fill in the removed regions naturally. The software features a modern GUI built with PyWebview for an accessible and intuitive experience.
+It uses Florence-2 from Microsoft for watermark identification and MAT for inpainting to fill in the removed regions naturally. The software features a modern GUI built with PyWebview for an accessible and intuitive experience.
 
 ## Screenshot
 
@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/505be2a8-8eda-4def-90b6-5a4ceefee456
 ## Features
 
 - **Smart Detection** - AI-powered watermark detection using Florence-2
-- **Seamless Removal** - LaMA inpainting for natural-looking results
+- **Seamless Removal** - MAT inpainting for higher-quality removal
 - **Video Support** - Process videos with two-pass detection and audio preservation
 - **AI Video Ready** - Remove watermarks from Sora, Sora 2, Runway, and other AI-generated videos
 - **Batch Processing** - Handle entire folders at once
@@ -57,7 +57,7 @@ After setup, double-click `run.bat` to launch the app.
 
 ### Linux / macOS
 
-Requires Python 3.10+ installed on your system.
+Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/) installed on your system.
 
 ```bash
 git clone https://github.com/D-Ogi/WatermarkRemover-AI.git
@@ -94,16 +94,16 @@ Your settings are automatically saved and restored on next launch.
 
 ```bash
 # Basic usage
-python remwm.py input.png output_folder/
+uv run --no-project --python ./venv/bin/python python remwm.py input.png output_folder/
 
 # With options
-python remwm.py ./images ./output --overwrite --max-bbox-percent=15 --force-format=PNG
+uv run --no-project --python ./venv/bin/python python remwm.py ./images ./output --overwrite --max-bbox-percent=15 --force-format=PNG
 
 # Process video with two-pass detection
-python remwm.py video.mp4 ./output --detection-skip=3 --fade-in=0.5 --fade-out=0.5
+uv run --no-project --python ./venv/bin/python python remwm.py video.mp4 ./output --detection-skip=3 --fade-in=0.5 --fade-out=0.5
 
 # Preview mode (detect without processing)
-python remwm.py input.png --preview
+uv run --no-project --python ./venv/bin/python python remwm.py input.png --preview
 ```
 
 ### CLI Options
@@ -134,7 +134,7 @@ python remwm.py input.png --preview
 ## Tech Stack
 
 - **Florence-2** - Microsoft's vision model for watermark detection
-- **LaMA** - Large Mask Inpainting model
+- **MAT** - Mask-Aware Transformer inpainting model
 - **PyWebview** - Cross-platform webview wrapper
 - **Alpine.js** - Lightweight JavaScript framework for UI
 - **PyTorch** - Deep learning backend

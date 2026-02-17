@@ -408,6 +408,16 @@
                 </div>
 
                 <p class="mt-4 text-neon-cyan font-mono text-lg" x-text="progress + '%'"></p>
+                <div class="mt-2 text-white/80 font-mono text-sm text-center">
+                    <p>
+                        <span class="opacity-70">Started:</span>
+                        <span x-text="formatStartedTime()"></span>
+                    </p>
+                    <p>
+                        <span class="opacity-70">Elapsed:</span>
+                        <span x-text="formatElapsedTime()"></span>
+                    </p>
+                </div>
 
                 <button @click="stopProcessing()" class="mt-8 px-6 py-2 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-full font-bold transition-all uppercase text-xs tracking-widest" x-text="t.buttons?.stop || 'Stop'">
                 </button>
@@ -559,6 +569,9 @@
                 processing: false,
                 progress: 0,
                 statusMsg: '',
+                processingStartedAt: null,
+                processingElapsedSeconds: 0,
+                processingTimerId: null,
                 theme: 'brainrot',  // Default theme for loading screen
                 lang: 'en',
                 t: {}, // translations
@@ -695,6 +708,7 @@
                     window.__pywebviewCompleteHandler = () => {
                         this.processing = false;
                         this.progress = 100;
+                        this.stopProcessingTimer();
                         this.addLogEntry(this.t.logs?.done || "Done! File processed successfully.", "text-neon-pink font-bold");
                     };
                     window.addEventListener('pywebview-complete', window.__pywebviewCompleteHandler);
@@ -811,6 +825,7 @@
 
                     this.processing = true;
                     this.progress = 0;
+                    this.startProcessingTimer();
                     this.addLogEntry(this.t.logs?.starting || "Starting process...", "text-white");
                     this.addLogEntry(this.t.logs?.first_run_hint || "(First run may download AI models)", "text-gray-500");
 
@@ -847,17 +862,20 @@
                             if (result && result.error) {
                                 this.addLogEntry("Error: " + result.error, "text-error");
                                 this.processing = false;
+                                this.stopProcessingTimer();
                                 clearInterval(statusInterval);
                                 return;
                             }
                         } catch (e) {
                             this.addLogEntry("Error: " + e.message, "text-error");
                             this.processing = false;
+                            this.stopProcessingTimer();
                             clearInterval(statusInterval);
                         }
                     } else {
                         this.addLogEntry(this.t.logs?.api_error || "API not available. Please run via run.bat/run.sh", "text-error");
                         this.processing = false;
+                        this.stopProcessingTimer();
                         clearInterval(statusInterval);
                     }
                 },
@@ -867,7 +885,51 @@
                         await pywebview.api.stop_processing();
                     }
                     this.processing = false;
+                    this.stopProcessingTimer();
                     this.addLogEntry(this.t.logs?.stopped || "Process stopped by user.", "text-error");
+                },
+
+                startProcessingTimer() {
+                    this.stopProcessingTimer();
+                    this.processingStartedAt = Date.now();
+                    this.processingElapsedSeconds = 0;
+                    this.processingTimerId = setInterval(() => {
+                        if (!this.processing || !this.processingStartedAt) {
+                            return;
+                        }
+                        this.processingElapsedSeconds = Math.max(
+                            0,
+                            Math.floor((Date.now() - this.processingStartedAt) / 1000)
+                        );
+                    }, 1000);
+                },
+
+                stopProcessingTimer() {
+                    if (this.processingTimerId) {
+                        clearInterval(this.processingTimerId);
+                        this.processingTimerId = null;
+                    }
+                },
+
+                formatStartedTime() {
+                    if (!this.processingStartedAt) {
+                        return '--:--:--';
+                    }
+                    return new Date(this.processingStartedAt).toTimeString().split(' ')[0];
+                },
+
+                formatElapsedTime() {
+                    const totalSeconds = Math.max(0, this.processingElapsedSeconds || 0);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+
+                    const paddedMinutes = String(minutes).padStart(2, '0');
+                    const paddedSeconds = String(seconds).padStart(2, '0');
+                    if (hours > 0) {
+                        return `${String(hours).padStart(2, '0')}:${paddedMinutes}:${paddedSeconds}`;
+                    }
+                    return `${paddedMinutes}:${paddedSeconds}`;
                 },
 
                 addLogEntry(msg, color = 'text-gray-400') {
